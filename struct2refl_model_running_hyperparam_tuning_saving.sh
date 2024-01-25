@@ -14,9 +14,10 @@ source activate /n/holylabs/LABS/pierce_lab/Users/astaroph/conda_envs/rocky8/pt2
 module load gcc/12.2.0-fasrc01
 cd ~/WingsAndWavelengths/
 
-python struct2refl_model_running_hyperparam_tuning_saving.py -f ${1} \
--b ${2} \
--l ${3} \
--e ${4} \
--w ${5} \
--s ${6}
+python ${1} -f ${2} \
+-b ${3} \
+-l ${4} \
+-e ${5} \
+-w ${6} \
+-s ${7} \
+-p ${8}
