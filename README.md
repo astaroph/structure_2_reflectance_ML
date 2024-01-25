@@ -17,10 +17,16 @@ fourier_struct2refl_model_running_hyperparam_tuning_saving.py \
 {BATCHSIZE} {LEARNINGRATE} {EPOCHS} {WEIGHTDECAY} \
 '/PATH/TO/SAVEDIR/'
 ```
-The first argument passed to sbatch is the python training tuning file (either the fourier version that integrates features extracted via an identical pathway from fourier transfomed SEM images, or the original SEM only)
+The first argument passed to sbatch is the python training tuning file (either the fourier version that integrates features extracted via an identical pathway from fourier transfomed SEM images, or the original SEM only).
+
 The second argument given to sbatch is a string that defines the directory and filename of a csv file containing 256x256 SEM image filenames and paths as strings in the first column, and ten subsequent columns denoting reflectance (or fluorescence) (0-1) in the UV, Blue, Green, Red, 740nm IR, 940nm IR, blue-fluorescence, green-fluorescence, red-fluorescence and maximal polarization intensity (across visible blue/green/red channels).
+
 The third argument is the batch size (float). Currently, the best accuracy has been obtained with a value of 6
+
 The fourth argument is the Learning rate (float). Currently most accurate results with 0.001, though highly variable.
+
 The fiftj argument is the number of epochs to train the algorithm (int). Currently training with 400 epochs (takes about 6-12 hours)
+
 The sixth argument is the weight decay parameter for the optimizer (float). Best accuracy is being obtained with 1 e-06, but not zero or 1e-05 or higher
+
 The seventh argument is a string denoting the full directory path for where to save the output models.
