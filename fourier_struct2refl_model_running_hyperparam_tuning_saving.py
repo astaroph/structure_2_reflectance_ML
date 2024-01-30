@@ -20,6 +20,7 @@ from time import localtime
 import pandas as pd
 import numpy as np
 from PIL import Image
+from torch.nn import GroupNorm
 
 start=time()
 usage = "usage: %prog [options] arg1 arg2"
@@ -38,6 +39,8 @@ parser.add_option("-s", "--save_path", dest='save_path', type="string",
                  help="the directory path for saving the best performing machine learning models and training output. Must end with a forward slash")
 parser.add_option("-p", "--prefix", dest='prefix', type="string",
                  help="the descriptive file prefix to append to the beginning of saved models")
+parser.add_option("-n", "--norm", dest='norm', type="string",
+                 help="the type of normalization layer to use in the model. Can be either 'batch' or 'group' for BatchNorm2d or GroupNorm")
 (options, args) = parser.parse_args()
 
 
@@ -49,13 +52,17 @@ epochs=options.epochs
 weight_decay=options.weight_decay
 save_path=options.save_path
 prefix=options.prefix
+norm=options.norm
+
 ###Inputs
 # filepath="./climate_change_solution_structural_test_folder/climate_change_solution_structural_image_reflectancevalues_dataset_updatedstructural.csv"
-# batch_size=6
+# batch_size=1
 # lr=0.001
 # epochs=10
 # weight_decay=0.000001
 # save_path='/n/holyscratch01/pierce_lab/astaroph/WW_machine_learning/CC_scales/machine_learning_models/structure_to_reflectance/'
+# prefix='fourier_groupnorm_struct2refl_highmagonly_higherVisnIRweights'
+# norm='group'
 
 
 # df_pairs2=pd.read_csv("./climate_change_solution_structural_test_folder/climate_change_solution_structural_image_reflectancevalues_dataset.csv")
@@ -216,116 +223,98 @@ def test_accuracy_perchannel(test_loader, model):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+# class BasicResidualBlock(nn.Module):
+#     def __init__(self, in_channels, out_channels, stride=1):
+#         super(BasicResidualBlock, self).__init__()
+#         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+#         self.bn1 = nn.BatchNorm2d(out_channels)
+#         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+#         self.bn2 = nn.BatchNorm2d(out_channels)
+
+#         self.shortcut = nn.Sequential()
+#         if stride != 1 or in_channels != out_channels:
+#             self.shortcut = nn.Sequential(
+#                 nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
+#                 nn.BatchNorm2d(out_channels)
+#             )
+
+#     def forward(self, x):
+#         identity = x
+#         out = F.relu(self.bn1(self.conv1(x)))
+#         out = self.bn2(self.conv2(out))
+#         out += self.shortcut(identity)
+#         out = F.relu(out)
+#         return out
+
+
+
 class BasicResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1):
+    def __init__(self, in_channels, out_channels, stride=1, norm='batch'):
         super(BasicResidualBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(out_channels)
+        if norm == 'group':
+            self.norm1 = GroupNorm(num_groups=32, num_channels=out_channels)
+        else:
+            self.norm1 = nn.BatchNorm2d(out_channels)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(out_channels)
+        if norm == 'group':
+            self.norm2 = GroupNorm(num_groups=32, num_channels=out_channels)
+        else:
+            self.norm2 = nn.BatchNorm2d(out_channels)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(out_channels)
+                GroupNorm(num_groups=32, num_channels=out_channels) if norm == 'group' else nn.BatchNorm2d(out_channels)
             )
-
     def forward(self, x):
         identity = x
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
+        out = F.relu(self.norm1(self.conv1(x)))
+        out = self.norm2(self.conv2(out))
         out += self.shortcut(identity)
         out = F.relu(out)
         return out
 
-# class RegressionModel(nn.Module):
-#     def __init__(self):
-#         super(RegressionModel, self).__init__()
-#         self.in_channels = 64
 
-#         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
-#         self.bn1 = nn.BatchNorm2d(64)
-
-#         # Increase the number of residual blocks
-#         self.layer1 = nn.Sequential(
-#             BasicResidualBlock(64, 128, stride=2),
-#             BasicResidualBlock(128, 128, stride=1)
-#         )
-#         self.layer2 = nn.Sequential(
-#             BasicResidualBlock(128, 256, stride=2),
-#             BasicResidualBlock(256, 256, stride=1),
-#             BasicResidualBlock(256, 256, stride=1)
-#         )
-#         self.layer3 = nn.Sequential(
-#             BasicResidualBlock(256, 512, stride=2),
-#             BasicResidualBlock(512, 512, stride=1),
-#             BasicResidualBlock(512, 512, stride=1)
-#         )
-#         self.layer4 = nn.Sequential(
-#             BasicResidualBlock(512, 1024, stride=2),
-#             BasicResidualBlock(1024, 1024, stride=1),
-#             BasicResidualBlock(1024, 1024, stride=1)
-#         )
-
-#         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # Adaptive pooling to handle varying input sizes
-#         self.fc1 = nn.Linear(1024, 512)
-#         self.fc2 = nn.Linear(512, 10)  # 10 output channels for reflectance values
-
-#     def forward(self, x):
-#         out = F.relu(self.bn1(self.conv1(x)))
-
-#         out = self.layer1(out)
-#         out = self.layer2(out)
-#         out = self.layer3(out)
-#         out = self.layer4(out)
-
-#         out = self.avgpool(out)  # Global average pooling
-#         out = out.view(out.size(0), -1)  # Flatten
-#         out = F.relu(self.fc1(out))
-#         out = self.fc2(out)
-
-#         return out
-    
-    
 class RegressionModel(nn.Module):
-    def __init__(self):
+    def __init__(self, norm='batch'):
         super(RegressionModel, self).__init__()
         self.in_channels = 64
 
         # Pathway for original images
         self.original_path = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(64),
+            GroupNorm(num_groups=32, num_channels=64) if norm == 'group' else nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
-            BasicResidualBlock(64, 128, stride=2),
-            BasicResidualBlock(128, 128),
-            BasicResidualBlock(128, 256, stride=2),
-            BasicResidualBlock(256, 256),
-            BasicResidualBlock(256, 512, stride=2),
-            BasicResidualBlock(512, 512),
-            BasicResidualBlock(512, 512),
-            BasicResidualBlock(512, 1024, stride=2),
-            BasicResidualBlock(1024, 1024),
-            BasicResidualBlock(1024, 1024),
+            BasicResidualBlock(64, 128, stride=2,norm=norm),
+            BasicResidualBlock(128, 128,norm=norm),
+            BasicResidualBlock(128, 256, stride=2,norm=norm),
+            BasicResidualBlock(256, 256,norm=norm),
+            BasicResidualBlock(256, 512, stride=2,norm=norm),
+            BasicResidualBlock(512, 512,norm=norm),
+            BasicResidualBlock(512, 512,norm=norm),
+            BasicResidualBlock(512, 1024, stride=2,norm=norm),
+            BasicResidualBlock(1024, 1024,norm=norm),
+            BasicResidualBlock(1024, 1024,norm=norm),
             nn.AdaptiveAvgPool2d((1, 1))
         )
 
         # Pathway for Fourier-transformed images
         self.fourier_path = nn.Sequential(
             nn.Conv2d(1, 64, kernel_size=3, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(64),
+            GroupNorm(num_groups=32, num_channels=64) if norm == 'group' else nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
-            BasicResidualBlock(64, 128, stride=2),
-            BasicResidualBlock(128, 128),
-            BasicResidualBlock(128, 256, stride=2),
-            BasicResidualBlock(256, 256),
-            BasicResidualBlock(256, 512, stride=2),
-            BasicResidualBlock(512, 512),
-            BasicResidualBlock(512, 512),
-            BasicResidualBlock(512, 1024, stride=2),
-            BasicResidualBlock(1024, 1024),
-            BasicResidualBlock(1024, 1024),
+            BasicResidualBlock(64, 128, stride=2,norm=norm),
+            BasicResidualBlock(128, 128,norm=norm),
+            BasicResidualBlock(128, 256, stride=2,norm=norm),
+            BasicResidualBlock(256, 256,norm=norm),
+            BasicResidualBlock(256, 512, stride=2,norm=norm),
+            BasicResidualBlock(512, 512,norm=norm),
+            BasicResidualBlock(512, 512,norm=norm),
+            BasicResidualBlock(512, 1024, stride=2,norm=norm),
+            BasicResidualBlock(1024, 1024,norm=norm),
+            BasicResidualBlock(1024, 1024,norm=norm),
             nn.AdaptiveAvgPool2d((1, 1))
         )
 
@@ -348,8 +337,8 @@ class RegressionModel(nn.Module):
         out = F.relu(self.fc1(combined_features))
         out = self.fc2(out)
 
-        return out    
-    
+        return out   
+
 
 def weighted_mse_loss(input, target, weights):
         # Ensure that the weights are on the correct device
@@ -396,7 +385,7 @@ def train_and_evaluate_model(lr, batch_size, num_epochs=10,decay=0.00001):
     paired_dataloader = DataLoader(paired_dataset, batch_size=batch_size, shuffle=True)
 
     # Initialize the generator
-    regression = RegressionModel().to(device)
+    regression = RegressionModel(norm=norm).to(device)
 
 
     # Define optimizer
@@ -450,9 +439,9 @@ def train_and_evaluate_model(lr, batch_size, num_epochs=10,decay=0.00001):
             optimizer.step()
             running_loss += loss.item()
             # Print loss
-            if (i+1) % int(len(structural_files)/20) == 0:    # print every 1/20th of the size of the training dataset
+            if (i+1) % int(len(structural_files)/10) == 0:    # print every 1/20th of the size of the training dataset
                 print(f"Epoch [{epoch + 1}/{num_epochs}], Batch [{i + 1}/{len(paired_dataloader)}]: loss {running_loss / 100:.4f}")
-                # mape_per_channel=test_accuracy_perchannel(test_dataloader)
+                # mape_per_channel=test_accuracy_perchannel(test_dataloader,regression)
                 loss_list.append(running_loss)
                 running_loss = 0.0
                 
@@ -462,10 +451,10 @@ def train_and_evaluate_model(lr, batch_size, num_epochs=10,decay=0.00001):
         if test_loss < best_test_loss:
             best_test_loss = test_loss
             rounded=str(np.round(best_test_loss,3)).replace('.','_')
-            torch.save(regression.state_dict(), f'{save_path}{prefix}_lr{lr}_bs{batch_size}_{weight_decay}decay_acc{rounded}_epoch{epoch}.pth')
+            torch.save(regression.state_dict(), f'{save_path}{prefix}_{norm}norm_lr{lr}_bs{batch_size}_{weight_decay}decay_acc{rounded}_epoch{epoch}.pth')
             print(f'Epoch {epoch+1}: Test Loss Improved to {test_loss:.4f}, Model Saved')
     mape_history2 = np.array(mape_history)
-    np.savetxt(f'{save_path}{prefix}_lr{lr}_bs{batch_size}_{weight_decay}decay_{epochs}_epochs.csv', mape_history2, delimiter=",")
+    np.savetxt(f'{save_path}{prefix}_{norm}norm_lr{lr}_bs{batch_size}_{weight_decay}decay_{epochs}_epochs.csv', mape_history2, delimiter=",")
 # Loop over hyperparameters
 # for lr in learning_rates:
 #     for batch_size in batch_sizes:
