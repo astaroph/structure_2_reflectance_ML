@@ -38,6 +38,8 @@ parser.add_option("-w", "--weight_decay", dest='weight_decay', type="float",
 parser.add_option("-s", "--save_path", dest='save_path', type="string",
                  help="the directory path for saving the best performing machine learning models and training output. Must end with a forward slash")
 (options, args) = parser.parse_args()
+parser.add_option("-p", "--prefix", dest='prefix', type="string",
+                 help="the descriptive file prefix to append to the beginning of saved models")
 
 
 ###Inputs
@@ -47,7 +49,7 @@ lr=options.lr
 epochs=options.epochs
 weight_decay=options.weight_decay
 save_path=options.save_path
-
+prefix=options.prefix
 # df_pairs2=pd.read_csv("./climate_change_solution_structural_test_folder/climate_change_solution_structural_image_reflectancevalues_dataset.csv")
 # df_pairs2=pd.read_csv("./climate_change_solution_structural_test_folder/climate_change_solution_structural_image_reflectancevalues_dataset_updatedstructural.csv")
 df_pairs2=pd.read_csv(filepath)
