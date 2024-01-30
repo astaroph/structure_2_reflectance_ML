@@ -15,7 +15,9 @@ sbatch struct2refl_model_running_hyperparam_tuning_saving.sh \
 fourier_struct2refl_model_running_hyperparam_tuning_saving.py \
 '/PATH/TO/DIR/climate_change_solution_structural_image_reflectancevalues_dataset_updatedstructural_prunedmagnification.csv' \
 {BATCHSIZE} {LEARNINGRATE} {EPOCHS} {WEIGHTDECAY} \
-'/PATH/TO/SAVEDIR/'
+'/PATH/TO/SAVEDIR/' \
+'DESCRIPTIVE_PREFIX_STRING' \
+'GROUPNORM_OR_BATCHNORM_STRING'
 ```
 The first argument passed to sbatch is the python training tuning file (either the fourier version that integrates features extracted via an identical pathway from fourier transfomed SEM images, or the original SEM only).
 
@@ -30,3 +32,7 @@ The fiftj argument is the number of epochs to train the algorithm (int). Current
 The sixth argument is the weight decay parameter for the optimizer (float). Best accuracy is being obtained with 1 e-06, but not zero or 1e-05 or higher
 
 The seventh argument is a string denoting the full directory path for where to save the output models.
+
+The eighth argument is a descriptive prefix string
+
+The ninth argument is either 'group' or 'batch' currently, for whether groupnorm (for small or 1 batch sizes) or batchnorm should be used
