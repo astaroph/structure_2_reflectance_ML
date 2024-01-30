@@ -3,7 +3,7 @@
 #SBATCH -n 1 # Number of cores
 #SBATCH --gpus 1 # number of gpus to request
 #SBATCH -N 1 # Ensure that all cores are on one machine
-#SBATCH -t 1-05:00 # Runtime in days-hours:minutes
+#SBATCH -t 2-12:00 # Runtime in days-hours:minutes
 #SBATCH --mem 30000 # Memory in MB
 #SBATCH -o /n/holyscratch01/pierce_lab/astaroph/scripts/script_output/struct2refl_model_running_hyperparam_tuning_saving%A.out # File to which standard out will be written
 #SBATCH -e /n/holyscratch01/pierce_lab/astaroph/scripts/script_output/struct2refl_model_running_hyperparam_tuning_saving%A.err # File to which standard err will be written
@@ -20,4 +20,5 @@ python ${1} -f ${2} \
 -e ${5} \
 -w ${6} \
 -s ${7} \
--p ${8}
+-p ${8} \
+-n ${9}
