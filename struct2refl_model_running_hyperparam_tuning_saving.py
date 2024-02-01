@@ -375,10 +375,10 @@ def train_and_evaluate_model(lr, batch_size, num_epochs=10,decay=0.00001):
         if test_loss < best_test_loss:
             best_test_loss = test_loss
             rounded=str(np.round(best_test_loss,3)).replace('.','_')
-            torch.save(regression.state_dict(), f'{save_path}struct2refl_highmagonly_higherVisnIRweights_lr{lr}_bs{batch_size}_{weight_decay}decay_acc{rounded}_epoch{epoch}.pth')
+            torch.save(regression.state_dict(), f'{save_path}{prefix}_lr{lr}_bs{batch_size}_{weight_decay}decay_acc{rounded}_epoch{epoch}.pth')
             print(f'Epoch {epoch+1}: Test Loss Improved to {test_loss:.4f}, Model Saved')
     mape_history2 = np.array(mape_history)
-    np.savetxt(f'{save_path}struct2refl_highmagonly_higherVisnIRweights_lr{lr}_bs{batch_size}_{weight_decay}decay_{epochs}_epochs.csv', mape_history2, delimiter=",")
+    np.savetxt(f'{save_path}{prefix}_lr{lr}_bs{batch_size}_{weight_decay}decay_{epochs}_epochs.csv', mape_history2, delimiter=",")
 # Loop over hyperparameters
 # for lr in learning_rates:
 #     for batch_size in batch_sizes:
