@@ -217,7 +217,7 @@ def test_accuracy_perchannel(test_loader, model):
        print(f"{name}: {mape:.4f}%", end=" | ")
 
     print(f"Average Test Loss: {avg_test_loss:.4f}")
-    return(avg_mape_per_channel.tolist())
+    return(avg_mape_per_channel.tolist(),avg_test_loss)
 
 # Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -252,21 +252,28 @@ class BasicResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, norm='batch'):
         super(BasicResidualBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        
         if norm == 'group':
-            self.norm1 = GroupNorm(num_groups=32, num_channels=out_channels)
+            self.norm1 = nn.GroupNorm(num_groups=32, num_channels=out_channels)
+        elif norm == 'instance':
+            self.norm1 = nn.InstanceNorm2d(out_channels)
         else:
             self.norm1 = nn.BatchNorm2d(out_channels)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         if norm == 'group':
-            self.norm2 = GroupNorm(num_groups=32, num_channels=out_channels)
+            self.norm2 = nn.GroupNorm(num_groups=32, num_channels=out_channels)
+        elif norm == 'instance':
+            self.norm2 = nn.InstanceNorm2d(out_channels)
         else:
             self.norm2 = nn.BatchNorm2d(out_channels)
-
+            
         self.shortcut = nn.Sequential()
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
-                GroupNorm(num_groups=32, num_channels=out_channels) if norm == 'group' else nn.BatchNorm2d(out_channels)
+                nn.GroupNorm(num_groups=32, num_channels=out_channels) if norm == 'group' else
+                nn.InstanceNorm2d(out_channels) if norm == 'instance' else
+                nn.BatchNorm2d(out_channels)
             )
     def forward(self, x):
         identity = x
@@ -285,7 +292,7 @@ class RegressionModel(nn.Module):
         # Pathway for original images
         self.original_path = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False),
-            GroupNorm(num_groups=32, num_channels=64) if norm == 'group' else nn.BatchNorm2d(64),
+            GroupNorm(num_groups=32, num_channels=64) if norm == 'group' else nn.InstanceNorm2d(64) if norm == 'instance' else nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             BasicResidualBlock(64, 128, stride=2,norm=norm),
             BasicResidualBlock(128, 128,norm=norm),
@@ -303,7 +310,7 @@ class RegressionModel(nn.Module):
         # Pathway for Fourier-transformed images
         self.fourier_path = nn.Sequential(
             nn.Conv2d(1, 64, kernel_size=3, stride=2, padding=1, bias=False),
-            GroupNorm(num_groups=32, num_channels=64) if norm == 'group' else nn.BatchNorm2d(64),
+            GroupNorm(num_groups=32, num_channels=64) if norm == 'group' else nn.InstanceNorm2d(64) if norm == 'instance' else nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             BasicResidualBlock(64, 128, stride=2,norm=norm),
             BasicResidualBlock(128, 128,norm=norm),
@@ -400,8 +407,6 @@ def train_and_evaluate_model(lr, batch_size, num_epochs=10,decay=0.00001):
         running_loss = 0.0
         for i, data in enumerate(paired_dataloader, 0):
             structural_inputs,fourier_inputs, reflectance_targets = data[0].to(device), data[1].to(device), data[2].to(device)
-            # Zero the gradients
-            optimizer.zero_grad()
 
             # Add noise to the input data
             noise_factor=0.2
@@ -432,21 +437,27 @@ def train_and_evaluate_model(lr, batch_size, num_epochs=10,decay=0.00001):
             # loss = criterion(reflectance_predictions, reflectance_targets)
             # Calculate the custom weighted loss
             loss = weighted_mse_loss(reflectance_predictions, reflectance_targets, channel_weights)
-
-            # Backpropagation
+            
+            # Zero the gradients
             optimizer.zero_grad()
+            # Backpropagation
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
             # Print loss
-            if (i+1) % int(len(structural_files)/10) == 0:    # print every 1/20th of the size of the training dataset
-                print(f"Epoch [{epoch + 1}/{num_epochs}], Batch [{i + 1}/{len(paired_dataloader)}]: loss {running_loss / 100:.4f}")
+            # if (i+1) % int(len(structural_files)/10) == 0:    # print every 1/20th of the size of the training dataset
+                # print(f"Epoch [{epoch + 1}/{num_epochs}], Batch [{i + 1}/{len(paired_dataloader)}]: loss {running_loss / 100:.4f}")
                 # mape_per_channel=test_accuracy_perchannel(test_dataloader,regression)
-                loss_list.append(running_loss)
-                running_loss = 0.0
-                
-        mape_per_channel=test_accuracy_perchannel(test_dataloader, regression)
-        mape_history.append(mape_per_channel)
+                # loss_list.append(running_loss)
+                # running_loss = 0.0
+        loss_list.append(running_loss)
+        print(f"Epoch [{epoch + 1}/{num_epochs}], loss {running_loss / 100:.4f}")
+        testing_output=test_accuracy_perchannel(test_dataloader, regression)
+        mape_per_channel=testing_output[0]
+        testing_loss=testing_output[1]
+        losses=[running_loss,testing_loss]
+        mape_per_channel_plus_losses = losses + mape_per_channel
+        mape_history.append(mape_per_channel_plus_losses)
         test_loss=np.mean(mape_per_channel)
         if test_loss < best_test_loss:
             best_test_loss = test_loss
