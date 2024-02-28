@@ -17,7 +17,7 @@ fourier_struct2refl_model_running_hyperparam_tuning_saving.py \
 {BATCHSIZE} {LEARNINGRATE} {EPOCHS} {WEIGHTDECAY} \
 '/PATH/TO/SAVEDIR/' \
 'DESCRIPTIVE_PREFIX_STRING' \
-'GROUPNORM_OR_BATCHNORM_STRING'
+'NORM_METHOD_STRING'
 ```
 The first argument passed to sbatch is the python training tuning file (either the fourier version that integrates features extracted via an identical pathway from fourier transfomed SEM images, or the original SEM only).
 
@@ -35,4 +35,9 @@ The seventh argument is a string denoting the full directory path for where to s
 
 The eighth argument is a descriptive prefix string
 
-The ninth argument is either 'group' or 'batch' currently, for whether groupnorm (for small or 1 batch sizes) or batchnorm should be used
+The ninth argument is either 'group' or 'batch' or 'instance' currently, for whether groupnorm or instancenorm (for small or 1 batch sizes) or batchnorm (larger batch sizes) should be used
+
+
+## Results (As of last update)
+Using the new Fourier capable model with instance norm and a batch size of 1, with 0.0001 learning rate and 0.00001 weight decay, we can see the following test and train dynamics:
+![Image Alt text](/images/Test and train loss graph for 2-8-2024 best model.png "Testing and Training dynamics across 400 epochs"))
