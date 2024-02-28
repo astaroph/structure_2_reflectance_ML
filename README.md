@@ -41,3 +41,10 @@ The ninth argument is either 'group' or 'batch' or 'instance' currently, for whe
 ## Results (As of last update)
 Using the new Fourier capable model with instance norm and a batch size of 1, with 0.0001 learning rate and 0.00001 weight decay, we can see the following test and train dynamics:
 ![Image Alt text](images/Test_train_loss_graph_for_2-8-2024_best_model.png)
+As well as the following average error rate (~2%) across all 10 channels described above
+![Image Alt text](images/average_across_channel_error_graph_2-8-2024_best_model.png)
+This indicates that the model is successfully able to learn features in unannotated SEM images that are relevant for predicting associated optical properties. Subsequent developments will abstract these features (such as via gradCam activation mapping) to determine which structural features underpin specific optical properties, as visualized in the following gradCam activation mapping which shows for a given SEM image (left) falsecolor gradCam mappings for the UV, 740 and 940nm IR (middle) as Blue green and red channels, and the blue, green and red reflectance mappings as blue green and red channels (right).
+![Image Alt text](images/Gradcam_falsecolor_example.png)
+
+
+
