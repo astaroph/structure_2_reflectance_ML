@@ -40,4 +40,4 @@ The ninth argument is either 'group' or 'batch' or 'instance' currently, for whe
 
 ## Results (As of last update)
 Using the new Fourier capable model with instance norm and a batch size of 1, with 0.0001 learning rate and 0.00001 weight decay, we can see the following test and train dynamics:
-![Image Alt text](/images/Test and train loss graph for 2-8-2024 best model.png
+![Image Alt text](images/Test_train_loss_graph_for_2-8-2024_best_model.png
