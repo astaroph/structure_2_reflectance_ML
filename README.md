@@ -3,7 +3,7 @@ A custom ML regression for making multispectral reflectance prediction algorithm
 
 I have implemented a Residual block architecture based Convolutional Neural Network framework adapted for spectral reflectance prediction from structural SEM images in Pytorch.
 
-Thus far I have tested this code on a single NVIDIA GPU node with 26-28GB memory in the Harvard RC high performance computing environment (Rocky8 OS). Workflow here assumes the python code is submitted by a job submitted to a high performance compute environment via slurm.
+Thus far I have tested this code on a single NVIDIA H100 GPU with 26-28GB allocated memory in the Harvard RC high performance computing environment (Rocky8 OS). Workflow here assumes the python code is submitted by a job submitted to a high performance compute environment via slurm.
 The code is designed to take a csv file as input with a series of hyperparameters over a given number of epochs and then train the algorithm. At each epoch, it tests the accuracy on 15% of the original paired dataset that was randomly split and set aside as a test dataset.
 If the model is more accurate (as an average across the 10 different channels) than the previous best accuracy, the model parameters are saved, such that the best performing model can be retained from any run regardless of whether subsequent training begins to degrade ther performance.
 
